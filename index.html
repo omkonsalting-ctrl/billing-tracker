@@ -1,0 +1,656 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Контроль счетов и актов</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Segoe UI', Arial, sans-serif; background: #f0f2f8; color: #222; min-height: 100vh; padding: 24px 16px 48px; }
+
+    .page-header {
+      background: linear-gradient(135deg, #1a237e 0%, #283593 100%);
+      color: #fff; border-radius: 14px; padding: 22px 30px 18px;
+      margin-bottom: 20px; display: flex; align-items: center; gap: 16px;
+      box-shadow: 0 4px 18px rgba(26,35,126,.25);
+    }
+    .page-header .icon { font-size: 36px; }
+    .page-header h1 { font-size: 22px; font-weight: 700; }
+    .page-header p  { font-size: 13px; opacity: .8; margin-top: 3px; }
+    .header-actions { margin-left: auto; display: flex; gap: 10px; flex-shrink: 0; }
+
+    .btn { border: none; border-radius: 9px; padding: 9px 18px; font-size: 13px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 7px; transition: all .18s; white-space: nowrap; }
+    .btn-primary { background: #fff; color: #1a237e; }
+    .btn-primary:hover { background: #e8eaf6; }
+    .btn-success { background: #43a047; color: #fff; }
+    .btn-success:hover { background: #388e3c; }
+    .btn-ghost { background: transparent; color: #888; border: 1.5px solid #ddd; }
+    .btn-ghost:hover { background: #f5f5f5; }
+    .btn-sm { padding: 5px 11px; font-size: 12px; border-radius: 7px; }
+
+    .legend { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 16px; }
+    .legend-item { display: flex; align-items: center; gap: 7px; background: #fff; border-radius: 8px; padding: 6px 14px; font-size: 13px; font-weight: 500; box-shadow: 0 1px 4px rgba(0,0,0,.08); }
+    .badge { display: inline-block; border-radius: 5px; padding: 2px 9px; font-size: 11px; font-weight: 700; letter-spacing: .5px; }
+    .badge-act { background: #1565c0; color: #fff; }
+    .badge-inv { background: #e65100; color: #fff; }
+
+    .stats { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 20px; }
+    .stat-card { background: #fff; border-radius: 10px; padding: 12px 20px; min-width: 140px; box-shadow: 0 1px 6px rgba(0,0,0,.08); text-align: center; }
+    .stat-card .val { font-size: 26px; font-weight: 700; }
+    .stat-card .lbl { font-size: 12px; color: #888; margin-top: 2px; }
+    .stat-card.total .val { color: #3949ab; }
+    .stat-card.done  .val { color: #2e7d32; }
+    .stat-card.left  .val { color: #e65100; }
+    .stat-card.overdue .val { color: #c62828; }
+
+    .progress-wrap { margin-bottom: 16px; }
+    .progress-label { font-size: 12.5px; color: #666; margin-bottom: 5px; }
+    .progress-bar-bg { background: #e8eaf6; border-radius: 10px; height: 10px; overflow: hidden; }
+    .progress-bar-fill { height: 100%; background: linear-gradient(90deg, #43a047, #66bb6a); border-radius: 10px; transition: width .5s ease; }
+
+    .month-tabs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 16px; }
+    .month-tab { border: 1.5px solid #c5cae9; border-radius: 20px; padding: 5px 14px; font-size: 12.5px; font-weight: 600; cursor: pointer; background: #fff; color: #3949ab; transition: all .15s; }
+    .month-tab:hover, .month-tab.active { background: #3949ab; color: #fff; border-color: #3949ab; }
+
+    .filters { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 18px; align-items: center; }
+    .filters label { font-size: 13px; font-weight: 600; color: #555; }
+    .filters select { border: 1.5px solid #c5cae9; border-radius: 8px; padding: 7px 12px; font-size: 13px; background: #fff; outline: none; min-width: 160px; }
+    .filters select:focus { border-color: #3949ab; }
+    .btn-reset { background: #e8eaf6; border: none; border-radius: 8px; padding: 7px 16px; font-size: 13px; font-weight: 600; color: #3949ab; cursor: pointer; }
+    .btn-reset:hover { background: #c5cae9; }
+
+    .table-wrap { background: #fff; border-radius: 14px; box-shadow: 0 2px 16px rgba(0,0,0,.09); overflow: hidden; }
+    table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+    thead tr { background: #283593; color: #fff; }
+    thead th { padding: 13px 14px; text-align: left; font-weight: 600; font-size: 12.5px; letter-spacing: .4px; white-space: nowrap; }
+    thead th:nth-child(1) { width: 60px; text-align: center; }
+    thead th:nth-child(3) { width: 130px; text-align: center; }
+    thead th:nth-child(4) { width: 130px; text-align: right; }
+    thead th:nth-child(5) { width: 80px; text-align: center; }
+    thead th:nth-child(6) { width: 100px; text-align: center; }
+
+    tr.group-row td { background: #e8eaf6; color: #1a237e; font-weight: 700; font-size: 13.5px; padding: 10px 14px; border-top: 3px solid #9fa8da; }
+    tr.group-row td .group-name { display: flex; align-items: center; gap: 8px; }
+    tr.group-row td .toggle-icon { font-size: 12px; transition: transform .2s; cursor: pointer; }
+    tr.group-row.collapsed td .toggle-icon { transform: rotate(-90deg); }
+    tr.group-row td .group-count { font-size: 11px; background: #3949ab; color: #fff; border-radius: 20px; padding: 2px 10px; font-weight: 600; }
+    tr.group-row td .group-actions { margin-left: auto; display: flex; gap: 6px; }
+
+    tr.data-row td { padding: 10px 14px; border-bottom: 1px solid #eeeeee; vertical-align: middle; }
+    tr.data-row:last-child td { border-bottom: none; }
+    tr.data-row.act-row  { background: #e3f2fd; }
+    tr.data-row.inv-row  { background: #fff8e1; }
+    tr.data-row.done-row { background: #e8f5e9 !important; }
+    tr.data-row.done-row td { color: #888; text-decoration: line-through; }
+    tr.data-row.done-row td:nth-child(1), tr.data-row.done-row td:nth-child(5), tr.data-row.done-row td:nth-child(6) { text-decoration: none; }
+    tr.data-row.overdue-row { background: #ffebee !important; }
+    tr.data-row.overdue-row td { color: #b71c1c; }
+    tr.data-row.overdue-row td:nth-child(1), tr.data-row.overdue-row td:nth-child(5), tr.data-row.overdue-row td:nth-child(6) { color: inherit; }
+    tr.data-row:hover td { filter: brightness(.97); }
+
+    td.cell-type { text-align: center; }
+    td.cell-date { text-align: center; font-weight: 600; white-space: nowrap; }
+    td.cell-amount { text-align: right; font-weight: 700; color: #2e7d32; white-space: nowrap; }
+    td.cell-done { text-align: center; }
+    td.cell-actions { text-align: center; white-space: nowrap; }
+
+    .date-pill { display: inline-block; border-radius: 6px; padding: 3px 10px; font-size: 12px; font-weight: 700; }
+    .date-pill.future  { background: #e8f5e9; color: #2e7d32; }
+    .date-pill.today   { background: #fff9c4; color: #f57f17; border: 1.5px solid #f9a825; }
+    .date-pill.overdue { background: #ffebee; color: #c62828; }
+    .date-pill.done    { background: #e0e0e0; color: #888; }
+
+    .cb-wrap { display: flex; justify-content: center; align-items: center; }
+    .cb-wrap input[type=checkbox] { width: 20px; height: 20px; accent-color: #2e7d32; cursor: pointer; }
+
+    .empty-state { text-align: center; padding: 40px; color: #aaa; font-size: 15px; }
+
+    /* MODAL */
+    .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.45); z-index: 1000; align-items: center; justify-content: center; }
+    .modal-overlay.open { display: flex; }
+    .modal { background: #fff; border-radius: 16px; padding: 30px 32px; width: 100%; max-width: 460px; box-shadow: 0 8px 40px rgba(0,0,0,.22); animation: modalIn .2s ease; }
+    @keyframes modalIn { from { transform: scale(.94); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+    .modal h2 { font-size: 18px; color: #1a237e; margin-bottom: 20px; }
+    .form-group { margin-bottom: 16px; }
+    .form-group label { display: block; font-size: 13px; font-weight: 600; color: #444; margin-bottom: 6px; }
+    .form-group input, .form-group select, .form-group textarea { width: 100%; border: 1.5px solid #c5cae9; border-radius: 9px; padding: 9px 13px; font-size: 14px; outline: none; transition: border .2s; font-family: inherit; }
+    .form-group input:focus, .form-group select:focus, .form-group textarea:focus { border-color: #3949ab; }
+    .form-group textarea { resize: vertical; min-height: 64px; }
+    .form-row { display: flex; gap: 12px; }
+    .form-row .form-group { flex: 1; }
+    .modal-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 22px; }
+
+    /* TOAST */
+    .toast { position: fixed; bottom: 28px; right: 28px; z-index: 2000; background: #1a237e; color: #fff; border-radius: 10px; padding: 12px 22px; font-size: 14px; font-weight: 500; box-shadow: 0 4px 20px rgba(0,0,0,.2); transform: translateY(80px); opacity: 0; transition: all .3s ease; }
+    .toast.show { transform: translateY(0); opacity: 1; }
+    .toast.success { background: #2e7d32; }
+    .toast.error   { background: #c62828; }
+
+    .loading { text-align: center; padding: 40px; color: #888; font-size: 15px; }
+
+    @media (max-width: 700px) {
+      .page-header h1 { font-size: 17px; }
+      table { font-size: 12px; }
+      thead th { padding: 10px 8px; }
+      tr.data-row td { padding: 8px 8px; }
+      .modal { padding: 22px 18px; margin: 16px; }
+      .header-actions { flex-direction: column; gap: 6px; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="page-header">
+  <div class="icon">📋</div>
+  <div>
+    <h1>Контроль счетов и актов</h1>
+    <p>Единое рабочее пространство для всей команды</p>
+  </div>
+  <div class="header-actions">
+    <button class="btn btn-primary" onclick="openAddRecord()">+ Добавить запись</button>
+    <button class="btn btn-primary" onclick="openAddClient()">+ Новый клиент</button>
+  </div>
+</div>
+
+<div class="legend">
+  <div class="legend-item"><span class="badge badge-act">АКТ</span> Акт выполненных работ</div>
+  <div class="legend-item"><span class="badge badge-inv">СЧЁТ</span> Счёт на оплату</div>
+  <div class="legend-item">✅ Выполнено</div>
+  <div class="legend-item">⚠️ Просрочено</div>
+</div>
+
+<div class="stats">
+  <div class="stat-card total"><div class="val" id="stat-total">—</div><div class="lbl">Всего документов</div></div>
+  <div class="stat-card done"> <div class="val" id="stat-done">—</div> <div class="lbl">Выполнено</div></div>
+  <div class="stat-card left"> <div class="val" id="stat-left">—</div> <div class="lbl">Осталось</div></div>
+  <div class="stat-card overdue"><div class="val" id="stat-overdue">—</div><div class="lbl">Просрочено</div></div>
+</div>
+
+<div class="progress-wrap">
+  <div class="progress-label" id="progress-label">Загрузка...</div>
+  <div class="progress-bar-bg"><div class="progress-bar-fill" id="progress-bar" style="width:0%"></div></div>
+</div>
+
+<div class="month-tabs" id="month-tabs"></div>
+
+<div class="filters">
+  <label>Клиент:</label>
+  <select id="filter-client"><option value="">Все клиенты</option></select>
+  <label>Тип:</label>
+  <select id="filter-type">
+    <option value="">Все типы</option>
+    <option value="АКТ">АКТ</option>
+    <option value="СЧЁТ">СЧЁТ</option>
+  </select>
+  <label>Статус:</label>
+  <select id="filter-status">
+    <option value="">Все</option>
+    <option value="pending">Не выполнено</option>
+    <option value="done">Выполнено</option>
+    <option value="overdue">Просрочено</option>
+  </select>
+  <button class="btn-reset" onclick="resetFilters()">Сбросить</button>
+</div>
+
+<div class="table-wrap">
+  <table id="main-table">
+    <thead>
+      <tr>
+        <th>Тип</th>
+        <th>Клиент / Контрагент</th>
+        <th>Дата / Срок</th>
+        <th>Сумма</th>
+        <th>Готово</th>
+        <th>Действия</th>
+      </tr>
+    </thead>
+    <tbody id="table-body"><tr><td colspan="6" class="loading">Загрузка данных...</td></tr></tbody>
+  </table>
+  <div class="empty-state" id="empty-state" style="display:none">Нет записей по выбранным фильтрам</div>
+</div>
+
+<!-- MODAL: ДОБАВИТЬ ЗАПИСЬ -->
+<div class="modal-overlay" id="modal-record">
+  <div class="modal">
+    <h2 id="modal-record-title">➕ Добавить запись</h2>
+    <div class="form-group">
+      <label>Клиент *</label>
+      <select id="rec-client"></select>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Тип документа *</label>
+        <select id="rec-type">
+          <option value="АКТ">АКТ</option>
+          <option value="СЧЁТ">СЧЁТ</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Дата (ДД.ММ.ГГГГ) *</label>
+        <input type="text" id="rec-date" placeholder="31.03.2026" maxlength="10" />
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Сумма (₽, необязательно)</label>
+      <input type="number" id="rec-amount" placeholder="200000" min="0" />
+    </div>
+    <div class="form-group">
+      <label>Примечание</label>
+      <textarea id="rec-note" placeholder="Любой комментарий..."></textarea>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal('modal-record')">Отмена</button>
+      <button class="btn btn-success" onclick="saveRecord()">Сохранить</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: НОВЫЙ КЛИЕНТ -->
+<div class="modal-overlay" id="modal-client">
+  <div class="modal">
+    <h2>👤 Добавить клиента</h2>
+    <div class="form-group">
+      <label>Название / ФИО клиента *</label>
+      <input type="text" id="client-name" placeholder="ООО Пример или Иванов Иван Иванович" />
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal('modal-client')">Отмена</button>
+      <button class="btn btn-success" onclick="saveClient()">Добавить</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: РЕДАКТИРОВАТЬ -->
+<div class="modal-overlay" id="modal-edit">
+  <div class="modal">
+    <h2>✏️ Редактировать запись</h2>
+    <input type="hidden" id="edit-id" />
+    <div class="form-group">
+      <label>Клиент</label>
+      <select id="edit-client"></select>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Тип документа</label>
+        <select id="edit-type">
+          <option value="АКТ">АКТ</option>
+          <option value="СЧЁТ">СЧЁТ</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Дата (ДД.ММ.ГГГГ)</label>
+        <input type="text" id="edit-date" maxlength="10" />
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Сумма (₽)</label>
+      <input type="number" id="edit-amount" min="0" />
+    </div>
+    <div class="form-group">
+      <label>Примечание</label>
+      <textarea id="edit-note"></textarea>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal('modal-edit')">Отмена</button>
+      <button class="btn btn-success" onclick="saveEdit()">Сохранить</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ─── STATE ────────────────────────────────────────────────────────────────────
+let allRecords = [];
+let allClients = [];
+let collapsedGroups = new Set();
+let activeMonth = "";
+
+// ─── API ──────────────────────────────────────────────────────────────────────
+async function api(method, url, body) {
+  const opts = { method, headers: { 'Content-Type': 'application/json' } };
+  if (body) opts.body = JSON.stringify(body);
+  const res = await fetch(url, opts);
+  if (!res.ok) { const e = await res.json(); throw new Error(e.error || 'Ошибка'); }
+  return res.json();
+}
+
+// ─── LOAD ─────────────────────────────────────────────────────────────────────
+async function loadAll() {
+  [allRecords, allClients] = await Promise.all([
+    api('GET', '/api/records'),
+    api('GET', '/api/clients'),
+  ]);
+  refreshClientFilter();
+  render();
+}
+
+// ─── UTILS ────────────────────────────────────────────────────────────────────
+function parseDate(str) {
+  if (!str) return null;
+  const p = str.split('.');
+  if (p.length !== 3) return null;
+  return new Date(+p[2], +p[1]-1, +p[0]);
+}
+function formatAmount(n) {
+  if (!n) return '';
+  return Number(n).toLocaleString('ru-RU') + ' ₽';
+}
+function getMonthKey(dateStr) {
+  if (!dateStr) return '';
+  const p = dateStr.split('.');
+  return p.length < 3 ? '' : p[2] + '-' + p[1];
+}
+function getMonthLabel(key) {
+  const [y, m] = key.split('-');
+  return new Date(+y, +m-1, 1).toLocaleString('ru-RU', { month: 'long', year: 'numeric' });
+}
+function dateStatus(row) {
+  if (row.done) return 'done';
+  const d = parseDate(row.date);
+  if (!d) return 'future';
+  const today = new Date(); today.setHours(0,0,0,0);
+  if (d < today) return 'overdue';
+  if (d.toDateString() === today.toDateString()) return 'today';
+  return 'future';
+}
+
+// ─── TOAST ────────────────────────────────────────────────────────────────────
+function showToast(msg, type = 'success') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast ' + type + ' show';
+  setTimeout(() => { t.className = 'toast'; }, 2800);
+}
+
+// ─── MODALS ───────────────────────────────────────────────────────────────────
+function openModal(id) { document.getElementById(id).classList.add('open'); }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+document.querySelectorAll('.modal-overlay').forEach(el => {
+  el.addEventListener('click', e => { if (e.target === el) el.classList.remove('open'); });
+});
+
+function fillClientSelect(selectId, selectedId) {
+  const sel = document.getElementById(selectId);
+  sel.innerHTML = '';
+  allClients.forEach(c => {
+    const o = document.createElement('option');
+    o.value = c.id; o.textContent = c.name;
+    if (c.id == selectedId) o.selected = true;
+    sel.appendChild(o);
+  });
+}
+
+// ─── ADD RECORD ───────────────────────────────────────────────────────────────
+function openAddRecord(preselectedClientId) {
+  document.getElementById('modal-record-title').textContent = '➕ Добавить запись';
+  document.getElementById('rec-date').value = '';
+  document.getElementById('rec-amount').value = '';
+  document.getElementById('rec-note').value = '';
+  document.getElementById('rec-type').value = 'АКТ';
+  fillClientSelect('rec-client', preselectedClientId || (allClients[0] && allClients[0].id));
+  openModal('modal-record');
+}
+
+async function saveRecord() {
+  const client_id = document.getElementById('rec-client').value;
+  const type      = document.getElementById('rec-type').value;
+  const date      = document.getElementById('rec-date').value.trim();
+  const amount    = document.getElementById('rec-amount').value;
+  const note      = document.getElementById('rec-note').value.trim();
+
+  if (!client_id) { showToast('Выберите клиента', 'error'); return; }
+  if (!date || !/^\d{2}\.\d{2}\.\d{4}$/.test(date)) { showToast('Введите дату в формате ДД.ММ.ГГГГ', 'error'); return; }
+
+  try {
+    await api('POST', '/api/records', { client_id: +client_id, type, date, amount: amount ? +amount : null, note });
+    closeModal('modal-record');
+    await loadAll();
+    showToast('Запись добавлена ✓');
+  } catch(e) { showToast(e.message, 'error'); }
+}
+
+// ─── ADD CLIENT ───────────────────────────────────────────────────────────────
+function openAddClient() {
+  document.getElementById('client-name').value = '';
+  openModal('modal-client');
+}
+
+async function saveClient() {
+  const name = document.getElementById('client-name').value.trim();
+  if (!name) { showToast('Введите название клиента', 'error'); return; }
+  try {
+    await api('POST', '/api/clients', { name });
+    closeModal('modal-client');
+    await loadAll();
+    showToast('Клиент добавлен: ' + name);
+  } catch(e) { showToast(e.message, 'error'); }
+}
+
+// ─── EDIT RECORD ──────────────────────────────────────────────────────────────
+function openEdit(record) {
+  document.getElementById('edit-id').value     = record.id;
+  document.getElementById('edit-type').value   = record.type;
+  document.getElementById('edit-date').value   = record.date;
+  document.getElementById('edit-amount').value = record.amount || '';
+  document.getElementById('edit-note').value   = record.note || '';
+  fillClientSelect('edit-client', record.client_id);
+  openModal('modal-edit');
+}
+
+async function saveEdit() {
+  const id        = document.getElementById('edit-id').value;
+  const client_id = document.getElementById('edit-client').value;
+  const type      = document.getElementById('edit-type').value;
+  const date      = document.getElementById('edit-date').value.trim();
+  const amount    = document.getElementById('edit-amount').value;
+  const note      = document.getElementById('edit-note').value.trim();
+
+  if (!date || !/^\d{2}\.\d{2}\.\d{4}$/.test(date)) { showToast('Введите дату в формате ДД.ММ.ГГГГ', 'error'); return; }
+
+  try {
+    const rec = allRecords.find(r => r.id == id);
+    await api('PUT', '/api/records/' + id, { client_id: +client_id, type, date, amount: amount ? +amount : null, done: rec.done, note });
+    closeModal('modal-edit');
+    await loadAll();
+    showToast('Запись обновлена ✓');
+  } catch(e) { showToast(e.message, 'error'); }
+}
+
+// ─── TOGGLE DONE ──────────────────────────────────────────────────────────────
+async function toggleDone(cb, id) {
+  try {
+    await api('PATCH', '/api/records/' + id + '/done', { done: cb.checked });
+    const rec = allRecords.find(r => r.id == id);
+    if (rec) rec.done = cb.checked ? 1 : 0;
+    render();
+  } catch(e) { showToast(e.message, 'error'); cb.checked = !cb.checked; }
+}
+
+// ─── DELETE ───────────────────────────────────────────────────────────────────
+async function deleteRecord(id) {
+  if (!confirm('Удалить эту запись?')) return;
+  try {
+    await api('DELETE', '/api/records/' + id);
+    await loadAll();
+    showToast('Запись удалена');
+  } catch(e) { showToast(e.message, 'error'); }
+}
+
+// ─── FILTERS ──────────────────────────────────────────────────────────────────
+function refreshClientFilter() {
+  const sel = document.getElementById('filter-client');
+  const cur = sel.value;
+  sel.innerHTML = '<option value="">Все клиенты</option>';
+  allClients.forEach(c => {
+    const o = document.createElement('option');
+    o.value = c.id; o.textContent = c.name;
+    if (c.id == cur) o.selected = true;
+    sel.appendChild(o);
+  });
+}
+
+function resetFilters() {
+  document.getElementById('filter-client').value = '';
+  document.getElementById('filter-type').value   = '';
+  document.getElementById('filter-status').value = '';
+  activeMonth = '';
+  render();
+}
+
+// ─── MONTH TABS ───────────────────────────────────────────────────────────────
+function buildMonthTabs() {
+  const months = [...new Set(allRecords.map(r => getMonthKey(r.date)).filter(Boolean))].sort();
+  const wrap = document.getElementById('month-tabs');
+  wrap.innerHTML = '';
+  const all = document.createElement('button');
+  all.className = 'month-tab' + (activeMonth === '' ? ' active' : '');
+  all.textContent = 'Все месяцы';
+  all.onclick = () => { activeMonth = ''; render(); };
+  wrap.appendChild(all);
+  months.forEach(mk => {
+    const btn = document.createElement('button');
+    btn.className = 'month-tab' + (activeMonth === mk ? ' active' : '');
+    btn.textContent = getMonthLabel(mk);
+    btn.onclick = () => { activeMonth = mk; render(); };
+    wrap.appendChild(btn);
+  });
+}
+
+// ─── RENDER ───────────────────────────────────────────────────────────────────
+function render() {
+  buildMonthTabs();
+
+  const filterClientId = document.getElementById('filter-client').value;
+  const filterType     = document.getElementById('filter-type').value;
+  const filterStatus   = document.getElementById('filter-status').value;
+
+  let filtered = allRecords.filter(row => {
+    if (filterClientId && row.client_id != filterClientId) return false;
+    if (filterType     && row.type !== filterType)         return false;
+    if (activeMonth    && getMonthKey(row.date) !== activeMonth) return false;
+    if (filterStatus) {
+      const s = dateStatus(row);
+      if (filterStatus === 'done'    && !row.done)       return false;
+      if (filterStatus === 'pending' && row.done)        return false;
+      if (filterStatus === 'overdue' && s !== 'overdue') return false;
+    }
+    return true;
+  });
+
+  // Group by client
+  const groups = {};
+  filtered.forEach(row => {
+    const key = row.client_name;
+    if (!groups[key]) groups[key] = { clientId: row.client_id, rows: [] };
+    groups[key].rows.push(row);
+  });
+
+  const tbody = document.getElementById('table-body');
+  tbody.innerHTML = '';
+  document.getElementById('empty-state').style.display = filtered.length === 0 ? 'block' : 'none';
+
+  Object.entries(groups).forEach(([clientName, { clientId, rows }]) => {
+    const cnt = rows.length;
+    const cntLabel = cnt === 1 ? 'документ' : cnt < 5 ? 'документа' : 'документов';
+    const gtr = document.createElement('tr');
+    gtr.className = 'group-row' + (collapsedGroups.has(clientName) ? ' collapsed' : '');
+    gtr.innerHTML = `
+      <td colspan="6">
+        <div class="group-name">
+          <span class="toggle-icon" onclick="toggleGroup('${clientName.replace(/'/g,"\\'")}',event)">▼</span>
+          <span>👤 ${clientName}</span>
+          <span class="group-count">${cnt} ${cntLabel}</span>
+          <div class="group-actions">
+            <button class="btn btn-primary btn-sm" onclick="openAddRecord(${clientId});event.stopPropagation()">+ Запись</button>
+          </div>
+        </div>
+      </td>`;
+    tbody.appendChild(gtr);
+
+    if (collapsedGroups.has(clientName)) return;
+
+    rows.forEach(row => {
+      const ds = dateStatus(row);
+      const tr = document.createElement('tr');
+      let rowClass = 'data-row ';
+      if (row.done)          rowClass += 'done-row';
+      else if (ds === 'overdue') rowClass += 'overdue-row';
+      else if (row.type === 'АКТ') rowClass += 'act-row';
+      else rowClass += 'inv-row';
+      tr.className = rowClass;
+
+      let pillClass = 'date-pill ';
+      if (row.done)           pillClass += 'done';
+      else if (ds === 'overdue') pillClass += 'overdue';
+      else if (ds === 'today')   pillClass += 'today';
+      else pillClass += 'future';
+
+      const pillLabel = ds === 'overdue' && !row.done ? '⚠ ' + row.date : row.date;
+      const amountStr = row.amount ? formatAmount(row.amount) : "<span style='color:#bbb'>—</span>";
+      const badgeClass = row.type === 'АКТ' ? 'badge-act' : 'badge-inv';
+      const rowData = JSON.stringify(row).replace(/"/g, '&quot;');
+
+      tr.innerHTML = `
+        <td class="cell-type"><span class="badge ${badgeClass}">${row.type}</span></td>
+        <td style="color:#444;font-size:13px">${row.client_name}${row.note ? '<br><span style="font-size:11.5px;color:#999;font-style:italic">' + row.note + '</span>' : ''}</td>
+        <td class="cell-date"><span class="${pillClass}">${pillLabel}</span></td>
+        <td class="cell-amount">${amountStr}</td>
+        <td class="cell-done">
+          <div class="cb-wrap">
+            <input type="checkbox" ${row.done ? 'checked' : ''} onchange="toggleDone(this,${row.id})" />
+          </div>
+        </td>
+        <td class="cell-actions">
+          <button class="btn btn-ghost btn-sm" onclick='openEdit(${JSON.stringify(row)})' title="Редактировать">✏️</button>
+          <button class="btn btn-ghost btn-sm" onclick="deleteRecord(${row.id})" title="Удалить" style="color:#c62828">🗑</button>
+        </td>`;
+      tbody.appendChild(tr);
+    });
+  });
+
+  updateStats(filtered);
+}
+
+function toggleGroup(client, e) {
+  e && e.stopPropagation();
+  if (collapsedGroups.has(client)) collapsedGroups.delete(client);
+  else collapsedGroups.add(client);
+  render();
+}
+
+function updateStats(filtered) {
+  const total   = allRecords.length;
+  const done    = allRecords.filter(r => r.done).length;
+  const left    = total - done;
+  const overdue = allRecords.filter(r => !r.done && dateStatus(r) === 'overdue').length;
+  document.getElementById('stat-total').textContent   = total;
+  document.getElementById('stat-done').textContent    = done;
+  document.getElementById('stat-left').textContent    = left;
+  document.getElementById('stat-overdue').textContent = overdue;
+  const pct = total ? Math.round(done / total * 100) : 0;
+  document.getElementById('progress-bar').style.width = pct + '%';
+  document.getElementById('progress-label').textContent = `Выполнено: ${done} из ${total} (${pct}%)`;
+}
+
+// ─── DATE AUTO-FORMAT ─────────────────────────────────────────────────────────
+['rec-date','edit-date'].forEach(id => {
+  document.getElementById(id).addEventListener('input', function() {
+    let v = this.value.replace(/\D/g,'');
+    if (v.length > 2) v = v.slice(0,2) + '.' + v.slice(2);
+    if (v.length > 5) v = v.slice(0,5) + '.' + v.slice(5);
+    this.value = v.slice(0,10);
+  });
+});
+
+document.getElementById('filter-client').addEventListener('change', render);
+document.getElementById('filter-type').addEventListener('change', render);
+document.getElementById('filter-status').addEventListener('change', render);
+
+// ─── INIT ─────────────────────────────────────────────────────────────────────
+loadAll();
+// Auto-refresh every 30 seconds for team sync
+setInterval(loadAll, 30000);
+</script>
+</body>
+</html>
